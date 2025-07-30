@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemistry Quiz</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2canvas CDN for image generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .quiz-container {
+            background-color: #ffffff;
+            border-radius: 1rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+            padding: 2.5rem; /* p-10 */
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+        }
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .popup.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .popup-content {
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+        .button-primary {
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            transition: background-color 0.2s ease-in-out;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .button-primary:hover {
+            background-color: #4338ca; /* indigo-700 */
+        }
+        .button-secondary {
+            background-color: #6b7280; /* gray-500 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            transition: background-color 0.2s ease-in-out;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .button-secondary:hover {
+            background-color: #4b5563; /* gray-600 */
+        }
+        input[type="text"], input[type="radio"] + label {
+            border-radius: 0.5rem; /* rounded-lg */
+        }
+        input[type="text"] {
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+        }
+        .question-options label {
+            display: block;
+            background-color: #f3f4f6; /* gray-100 */
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            border-radius: 0.5rem;
+        }
+        .question-options label:hover {
+            background-color: #e5e7eb; /* gray-200 */
+        }
+        .question-options input[type="radio"]:checked + label {
+            background-color: #bfdbfe; /* blue-200 */
+            border-color: #3b82f6; /* blue-500 */
+        }
+        .saq-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            display: none; /* Hidden by default */
+        }
+        .spinner {
+            border: 8px solid #f3f3f3; /* Light grey */
+            border-top: 8px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Introduction Popup -->
+    <div id="introPopup" class="popup active">
+        <div class="popup-content">
+            <p>Welcome to the Chemistry Quiz!</p>
+            <p>Test your knowledge on solutions and concentrations.</p>
+            <p>Good luck!</p>
+        </div>
+    </div>
+
+    <!-- Main Quiz Container -->
+    <div id="quizContainer" class="quiz-container hidden">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Chemistry Quiz</h1>
+
+        <!-- Name Input Section -->
+        <div id="nameInputSection" class="mb-8">
+            <label for="userName" class="block text-lg font-medium text-gray-700 mb-2">Please enter your name:</label>
+            <input type="text" id="userName" placeholder="Your Name" class="saq-input mb-4" required>
+            <button id="startQuizBtn" class="button-primary">Start Quiz</button>
+        </div>
+
+        <!-- Quiz Section -->
+        <div id="quizSection" class="hidden">
+            <p class="text-lg text-gray-600 mb-4">Attempt: <span id="attemptCount">1</span>/3</p>
+            <p class="text-xl font-semibold text-gray-700 mb-6" id="questionText"></p>
+            <div id="optionsContainer" class="question-options text-left mb-6">
+                <!-- Options will be loaded here for MCQs -->
+            </div>
+            <input type="text" id="saqAnswer" class="saq-input hidden" placeholder="Your answer...">
+            <button id="submitAnswerBtn" class="button-primary w-full">Submit Answer</button>
+            <p class="text-sm text-gray-500 mt-4">Current Score: <span id="currentScore">0</span> / <span id="totalQuestions">20</span></p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden text-left">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Quiz Results for <span id="finalUserName"></span></h2>
+            <p class="text-xl text-gray-700 mb-2">Final Score: <span id="finalScore"></span> / <span id="totalQuestionsResults">20</span></p>
+            <p class="text-xl text-gray-700 mb-4" id="passFailMessage"></p>
+
+            <div id="failedQuestionsSummary" class="mt-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">Questions You Missed:</h3>
+                <ul id="failedQuestionsList" class="list-disc pl-5 text-gray-700">
+                    <!-- Failed questions will be listed here -->
+                </ul>
+            </div>
+
+            <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                <button id="downloadResultsBtn" class="button-primary">Download Results (PNG)</button>
+                <button id="retryQuizBtn" class="button-secondary hidden">Retry Quiz</button>
+                <button id="reviewAnswersBtn" class="button-secondary hidden">Review All Answers</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Questions data
+        const questions = [
+            {
+                type: 'MCQ',
+                question: 'A homogeneous mixture composed of one or more substances dissolved in another substance is called a:',
+                options: ['Solute', 'Suspension', 'Solution', 'Precipitate'],
+                correctAnswer: 'Solution'
+            },
+            {
+                type: 'SAQ',
+                question: 'What is the specific term for the substance that is dissolved in a liquid solvent?',
+                correctAnswer: 'Solute'
+            },
+            {
+                type: 'MCQ',
+                question: 'To determine the number of moles (n) in a given quantity of a substance, you should divide the given quantity by:',
+                options: ['Avogadro\'s number', 'Molecular weight', 'Volume (L)', 'Concentration (c)'],
+                correctAnswer: 'Molecular weight'
+            },
+            {
+                type: 'SAQ',
+                question: 'What is the abbreviation for moles?',
+                correctAnswer: 'mol'
+            },
+            {
+                type: 'MCQ',
+                question: 'Molarity (M) indicates the number of moles of solute dissolved in what quantity of solution?',
+                options: ['1 gram', '1 litre', '100 millilitres', '1 kilogram'],
+                correctAnswer: '1 litre'
+            },
+            {
+                type: 'SAQ',
+                question: 'What is the term for $6.022\\times10^{\\wedge}23$ particles?',
+                correctAnswer: 'Avogadro\'s number'
+            },
+            {
+                type: 'MCQ',
+                question: 'When preparing a solution, if you use a hydrated salt, what must be included in the calculation of the molecular weight?',
+                options: ['The mass of the beaker', 'The volume of the solvent', 'The water(s) of hydration', 'The temperature of the solution'],
+                correctAnswer: 'The water(s) of hydration'
+            },
+            {
+                type: 'SAQ',
+                question: 'What is the common symbol for molarity?',
+                correctAnswer: 'M'
+            },
+            {
+                type: 'MCQ',
+                question: 'What process is defined as adding more solvent (water) to a solution?',
+                options: ['Crystallization', 'Precipitation', 'Dilution', 'Filtration'],
+                correctAnswer: 'Dilution'
+            },
+            {
+                type: 'SAQ',
+                question: 'What happens to the number of moles of solute during a dilution?',
+                correctAnswer: 'Remains same'
+            },
+            {
+                type: 'MCQ',
+                question: 'A saturated solution is one where, at a particular temperature, no more solute can be dissolved and the excess settles at the bottom. The solubility of most solids typically changes how with increasing temperature?',
+                options: ['Decreases', 'Increases', 'Stays the same', 'Becomes unpredictable'],
+                correctAnswer: 'Increases'
+            },
+            {
+                type: 'SAQ',
+                question: 'What is the main characteristic of a saturated solution regarding undissolved solute at a specific temperature?',
+                correctAnswer: 'Excess settles'
+            },
+            {
+                type: 'MCQ',
+                question: 'Which formula is specifically used to calculate the mass (m) of solute needed for preparing a molar solution when given concentration (c), volume (V), and molecular weight (MW)?',
+                options: ['$m=c/(V\\times MW)$', '$m=V/(c\\times MW)$', '$m=c\\times V\\times MW$', '$m=(c\\times V)/MW$'],
+                correctAnswer: '$m=c\\times V\\times MW$'
+            },
+            {
+                type: 'SAQ',
+                question: 'What type of glassware is typically used to measure the final volume precisely when preparing a solution?',
+                correctAnswer: 'Volumetric flask'
+            },
+            {
+                type: 'MCQ',
+                question: 'What does %w/v (percentage weight per volume) represent in solution concentration?',
+                options: ['Grams of solute per 100 grams of solution', 'Milliliters of solute per 100 milliliters of solution', 'Grams of solute dissolved in 100 mL of solution', 'Grams of solute per liter of solution'],
+                correctAnswer: 'Grams of solute dissolved in 100 mL of solution'
+            },
+            {
+                type: 'SAQ',
+                question: 'What term describes a concentrated solution that is diluted to a lower concentration for use?',
+                correctAnswer: 'Stock solution'
+            },
+            {
+                type: 'MCQ',
+                question: 'Which of the following is a common strength of hydrogen peroxide solution used for science investigations in schools?',
+                options: ['100 volume (30%)', '120 volume (35%)', '20 volume (6%)', '5 volume (1.5%)'],
+                correctAnswer: '20 volume (6%)'
+            },
+            {
+                type: 'SAQ',
+                question: 'What does the term \'anhydrous\' mean regarding a salt?',
+                correctAnswer: 'No water'
+            },
+            {
+                type: 'MCQ',
+                question: 'What is an advantage of expressing concentration as weight percent $(\\%w/w)?$',
+                options: ['It is always a whole number.', 'The solution can be prepared independently of temperature considerations.', 'It only applies to liquid solutes.', 'It is simpler to calculate than molarity.'],
+                correctAnswer: 'The solution can be prepared independently of temperature considerations.'
+            },
+            {
+                type: 'MCQ',
+                question: 'To ensure accurate measurements, volumetric glassware is calibrated at what temperature?',
+                options: ['Boiling point', 'Freezing point', 'Room temperature', '0 degrees Celsius'],
+                correctAnswer: 'Room temperature'
+            }
+        ];
+
+        // DOM Elements
+        const introPopup = document.getElementById('introPopup');
+        const quizContainer = document.getElementById('quizContainer');
+        const nameInputSection = document.getElementById('nameInputSection');
+        const userNameInput = document.getElementById('userName');
+        const startQuizBtn = document.getElementById('startQuizBtn');
+        const quizSection = document.getElementById('quizSection');
+        const questionText = document.getElementById('questionText');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const saqAnswerInput = document.getElementById('saqAnswer');
+        const submitAnswerBtn = document.getElementById('submitAnswerBtn');
+        const currentScoreSpan = document.getElementById('currentScore');
+        const totalQuestionsSpan = document.getElementById('totalQuestions');
+        const attemptCountSpan = document.getElementById('attemptCount');
+        const resultsSection = document.getElementById('resultsSection');
+        const finalUserNameSpan = document.getElementById('finalUserName');
+        const finalScoreSpan = document.getElementById('finalScore');
+        const totalQuestionsResultsSpan = document.getElementById('totalQuestionsResults');
+        const passFailMessage = document.getElementById('passFailMessage');
+        const failedQuestionsSummary = document.getElementById('failedQuestionsSummary');
+        const failedQuestionsList = document.getElementById('failedQuestionsList');
+        const downloadResultsBtn = document.getElementById('downloadResultsBtn');
+        const retryQuizBtn = document.getElementById('retryQuizBtn');
+        const reviewAnswersBtn = document.getElementById('reviewAnswersBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // Quiz State Variables
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let attempts = 1;
+        let failedQuestions = [];
+        let userName = '';
+        const passMark = 0.60; // 60%
+        let quizPassedOnAttempt = false;
+
+        // Function to show loading overlay
+        function showLoading() {
+            loadingOverlay.style.display = 'flex';
+        }
+
+        // Function to hide loading overlay
+        function hideLoading() {
+            loadingOverlay.style.display = 'none';
+        }
+
+        // Function to display the introduction popup
+        function showIntroPopup() {
+            introPopup.classList.add('active');
+            setTimeout(() => {
+                introPopup.classList.remove('active');
+                setTimeout(() => {
+                    introPopup.classList.add('hidden'); // Hide completely after transition
+                    quizContainer.classList.remove('hidden'); // Show main quiz container
+                    nameInputSection.classList.remove('hidden'); // Show name input
+                }, 300); // Match CSS transition duration
+            }, 3000); // Popup lasts for 3 seconds
+        }
+
+        // Function to start the quiz after name input
+        function startQuiz() {
+            userName = userNameInput.value.trim();
+            if (userName === '') {
+                // Using a simple message box instead of alert()
+                showMessageBox('Please enter your name to start the quiz.');
+                return;
+            }
+            nameInputSection.classList.add('hidden');
+            quizSection.classList.remove('hidden');
+            totalQuestionsSpan.textContent = questions.length;
+            totalQuestionsResultsSpan.textContent = questions.length;
+            displayQuestion();
+        }
+
+        // Function to display the current question
+        function displayQuestion() {
+            const question = questions[currentQuestionIndex];
+            questionText.textContent = question.question;
+            optionsContainer.innerHTML = ''; // Clear previous options
+            saqAnswerInput.value = ''; // Clear previous SAQ answer
+            saqAnswerInput.classList.add('hidden'); // Hide SAQ input by default
+
+            if (question.type === 'MCQ') {
+                optionsContainer.classList.remove('hidden');
+                question.options.forEach((option, index) => {
+                    const inputId = `option${index}`;
+                    optionsContainer.innerHTML += `
+                        <input type="radio" id="${inputId}" name="answer" value="${option}" class="hidden">
+                        <label for="${inputId}" class="block p-3 mb-2 bg-blue-50 hover:bg-blue-100 rounded-lg cursor-pointer transition duration-200 ease-in-out">
+                            ${option}
+                        </label>
+                    `;
+                });
+            } else { // SAQ
+                optionsContainer.classList.add('hidden');
+                saqAnswerInput.classList.remove('hidden');
+            }
+            // Update current score display
+            currentScoreSpan.textContent = score;
+            attemptCountSpan.textContent = attempts;
+        }
+
+        // Function to handle answer submission
+        function submitAnswer() {
+            const question = questions[currentQuestionIndex];
+            let userAnswer;
+
+            if (question.type === 'MCQ') {
+                const selectedOption = document.querySelector('input[name="answer"]:checked');
+                userAnswer = selectedOption ? selectedOption.value : '';
+            } else { // SAQ
+                userAnswer = saqAnswerInput.value.trim();
+            }
+
+            if (userAnswer === '') {
+                showMessageBox('Please select an option or enter an answer.');
+                return;
+            }
+
+            // Check answer and update score/failed questions
+            const isCorrect = (userAnswer.toLowerCase() === question.correctAnswer.toLowerCase());
+            if (isCorrect) {
+                score++;
+            } else {
+                failedQuestions.push({
+                    question: question.question,
+                    userAnswer: userAnswer,
+                    correctAnswer: question.correctAnswer
+                });
+            }
+
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                displayQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        // Function to end the quiz and display results
+        function endQuiz() {
+            quizSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
+
+            finalUserNameSpan.textContent = userName;
+            finalScoreSpan.textContent = score;
+
+            const percentageScore = (score / questions.length);
+            if (percentageScore >= passMark) {
+                passFailMessage.textContent = `Congratulations, ${userName}! You passed!`;
+                passFailMessage.classList.remove('text-red-600');
+                passFailMessage.classList.add('text-green-600');
+                quizPassedOnAttempt = true;
+                retryQuizBtn.classList.add('hidden'); // No retry needed if passed
+                reviewAnswersBtn.classList.remove('hidden'); // Allow review if passed
+            } else {
+                passFailMessage.textContent = `Sorry, ${userName}, you did not pass.`;
+                passFailMessage.classList.remove('text-green-600');
+                passFailMessage.classList.add('text-red-600');
+                quizPassedOnAttempt = false;
+
+                if (attempts < 3) {
+                    retryQuizBtn.classList.remove('hidden');
+                    reviewAnswersBtn.classList.add('hidden'); // No review if failed and can retry
+                } else {
+                    retryQuizBtn.classList.add('hidden'); // No more retries
+                    reviewAnswersBtn.classList.add('hidden'); // No review if failed all attempts
+                }
+            }
+
+            displayFailedQuestions();
+        }
+
+        // Function to display failed questions
+        function displayFailedQuestions() {
+            failedQuestionsList.innerHTML = ''; // Clear previous list
+            if (failedQuestions.length > 0) {
+                failedQuestionsSummary.classList.remove('hidden');
+                failedQuestions.forEach(item => {
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('mb-2');
+                    listItem.innerHTML = `
+                        <p class="font-medium">Question: ${item.question}</p>
+                        <p class="text-red-600">Your Answer: ${item.userAnswer}</p>
+                        <p class="text-green-600">Correct Answer: ${item.correctAnswer}</p>
+                    `;
+                    failedQuestionsList.appendChild(listItem);
+                });
+            } else {
+                failedQuestionsSummary.classList.add('hidden');
+            }
+        }
+
+        // Function to retry the quiz
+        function retryQuiz() {
+            attempts++;
+            currentQuestionIndex = 0;
+            score = 0;
+            failedQuestions = [];
+            quizPassedOnAttempt = false;
+
+            resultsSection.classList.add('hidden');
+            quizSection.classList.remove('hidden');
+            retryQuizBtn.classList.add('hidden'); // Hide retry button
+            reviewAnswersBtn.classList.add('hidden'); // Hide review button
+
+            displayQuestion();
+        }
+
+        // Function to review all answers (only available if passed)
+        function reviewAllAnswers() {
+            quizSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden'); // Ensure results section is visible
+
+            // Temporarily set failedQuestions to include all questions for review
+            // This is a simplified approach for demonstration. A more robust solution
+            // would involve a separate "review mode" display.
+            failedQuestions = [];
+            questions.forEach((q, index) => {
+                // For review, we want to show all questions and their correct answers.
+                // We'll simulate a "failed" state for all questions to show their answers.
+                // In a real review mode, you might want to show user's answer vs correct.
+                failedQuestions.push({
+                    question: q.question,
+                    userAnswer: 'N/A (Review Mode)', // Indicate this is not their actual answer
+                    correctAnswer: q.correctAnswer
+                });
+            });
+            displayFailedQuestions(); // Display all questions as "missed" for review
+            passFailMessage.textContent = `Reviewing all answers for ${userName}.`;
+            passFailMessage.classList.remove('text-red-600');
+            passFailMessage.classList.add('text-blue-600'); // Change color for review mode
+            retryQuizBtn.classList.add('hidden');
+            reviewAnswersBtn.classList.add('hidden'); // Hide review button once in review
+        }
+
+
+        // Function to download results as PNG
+        async function downloadResults() {
+            showLoading();
+            // Create a temporary div to render the content for screenshot
+            const tempDiv = document.createElement('div');
+            tempDiv.style.width = '800px'; // Set a fixed width for consistent screenshot
+            tempDiv.style.padding = '40px';
+            tempDiv.style.backgroundColor = '#ffffff';
+            tempDiv.style.borderRadius = '1rem';
+            tempDiv.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+            tempDiv.style.textAlign = 'left'; // Align text left for the screenshot
+
+            let congratulatoryNote = '';
+            if (quizPassedOnAttempt) {
+                congratulatoryNote = `<p class="text-green-600 text-lg font-semibold mt-4">Well done, ${userName}! You demonstrated excellent knowledge!</p>`;
+            } else {
+                congratulatoryNote = `<p class="text-red-600 text-lg font-semibold mt-4">Keep practicing, ${userName}! You'll get there!</p>`;
+            }
+
+            let failedQuestionsHtml = '';
+            if (failedQuestions.length > 0) {
+                failedQuestionsHtml = `
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">Questions You Missed:</h3>
+                    <ul class="list-disc pl-5 text-gray-700">
+                `;
+                failedQuestions.forEach(item => {
+                    failedQuestionsHtml += `
+                        <li class="mb-2">
+                            <p class="font-medium">Question: ${item.question}</p>
+                            <p class="text-red-600">Your Answer: ${item.userAnswer}</p>
+                            <p class="text-green-600">Correct Answer: ${item.correctAnswer}</p>
+                        </li>
+                    `;
+                });
+                failedQuestionsHtml += `</ul>`;
+            } else {
+                 failedQuestionsHtml = `<p class="text-gray-600 mt-4">You got all questions correct!</p>`;
+            }
+
+
+            tempDiv.innerHTML = `
+                <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Chemistry Quiz Results</h1>
+                <p class="text-xl text-gray-700 mb-2"><strong>Name:</strong> ${userName}</p>
+                <p class="text-xl text-gray-700 mb-2"><strong>Final Score:</strong> ${score} / ${questions.length}</p>
+                <p class="text-xl text-gray-700 mb-4"><strong>Percentage:</strong> ${((score / questions.length) * 100).toFixed(2)}%</p>
+                ${congratulatoryNote}
+                ${failedQuestionsHtml}
+            `;
+
+            document.body.appendChild(tempDiv); // Append to body to be rendered by html2canvas
+
+            try {
+                const canvas = await html2canvas(tempDiv, {
+                    scale: 2, // Increase scale for better resolution
+                    useCORS: true, // Important for images if any (though not used here)
+                    logging: false // Disable logging for cleaner console
+                });
+                const image = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
+                const link = document.createElement('a');
+                link.download = `${userName}_Quiz_Results.png`;
+                link.href = image;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (error) {
+                console.error('Error generating image:', error);
+                showMessageBox('Failed to generate results image. Please try again.');
+            } finally {
+                document.body.removeChild(tempDiv); // Remove the temporary div
+                hideLoading();
+            }
+        }
+
+        // Custom message box function instead of alert()
+        function showMessageBox(message) {
+            const messageBox = document.createElement('div');
+            messageBox.classList.add('fixed', 'top-1/2', 'left-1/2', '-translate-x-1/2', '-translate-y-1/2', 'bg-red-500', 'text-white', 'p-4', 'rounded-lg', 'shadow-lg', 'z-50', 'text-center');
+            messageBox.textContent = message;
+            document.body.appendChild(messageBox);
+            setTimeout(() => {
+                messageBox.remove();
+            }, 3000); // Message disappears after 3 seconds
+        }
+
+        // Event Listeners
+        window.onload = showIntroPopup;
+        startQuizBtn.addEventListener('click', startQuiz);
+        submitAnswerBtn.addEventListener('click', submitAnswer);
+        retryQuizBtn.addEventListener('click', retryQuiz);
+        downloadResultsBtn.addEventListener('click', downloadResults);
+        reviewAnswersBtn.addEventListener('click', reviewAllAnswers);
+
+    </script>
+</body>
+</html>
